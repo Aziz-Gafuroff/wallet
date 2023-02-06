@@ -21,21 +21,20 @@ var (
 	ErrPaymentNotFound = errors.New("Payment not found")
 )
 
-func (service *Service) RegisterAcccount(phone types.Phone) (*types.Account, error) {
-	for _, account := range service.accounts {
+func (s *Service) RegisterAcccount(phone types.Phone) (*types.Account, error) {
+	for _, account := range s.accounts {
 		if account.Phone == phone {
 			return nil, ErrPhoneRegistred
 		}
-		
 	}
 
-	service.nextAccountID++
+	s.nextAccountID++
 	account := &types.Account{
-		ID: service.nextAccountID,
+		ID: s.nextAccountID,
 		Phone: phone,
 		Balance: 0,
 	}
-	service.accounts = append(service.accounts, account)
+	s.accounts = append(s.accounts, account)
 
 	return account, nil
 
@@ -112,3 +111,27 @@ func (s *Service) Reject(paymentID string) error {
 	return nil
 }
 
+func (s *Service) Deposit(accountID int64, amount types.Money) error {
+	account, err := s.FindAccountByID(accountID)
+	if err != nil {
+		return err
+	}
+	
+	account.Balance = amount
+
+	return nil
+}
+
+func (s *Service) Repeat(paymentID string) (*types.Payment, error) {
+	payment, err := s.FindPaymentByID(paymentID)
+	if err != nil {
+		return nil, ErrPaymentNotFound
+	}
+
+	payment, err = s.Pay(payment.AccountID, payment.Amount, payment.Category)
+	if err != nil {
+		return nil, err
+	}
+
+	return payment, nil
+}
