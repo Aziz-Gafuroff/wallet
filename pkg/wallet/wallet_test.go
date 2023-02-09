@@ -201,3 +201,56 @@ func TestRepeat_succsess(t *testing.T) {
 		return
 	}
 }
+
+func TestFavoritePayment_succsess(t *testing.T) {
+	tsvc := newTestService()
+
+	_, payments, err := tsvc.addAccount(defaultTestAccount)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	favorite, err := tsvc.FavoritePayment(payments[0].ID, "TCELL")
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	if reflect.DeepEqual(favorite.ID, payments[0].ID) {
+		t.Errorf("result: %v, expexted: %v", favorite, payments[0])
+		return
+	}
+}
+
+func TestPayFromFavorite_succsess(t *testing.T) {
+	tsvc := newTestService()
+
+	_, payments, err := tsvc.addAccount(defaultTestAccount)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	favorite, err := tsvc.FavoritePayment(payments[0].ID, "TCELL")
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+
+	payment, err := tsvc.PayFromFavorite(favorite.ID)
+	if err != nil {
+		t.Errorf("%v", err)
+		return 
+	}
+	savedPayment, err := tsvc.FindPaymentByID(payment.ID)
+	if err != nil {
+		t.Errorf("%v", err)
+		return 
+	}
+
+	if !reflect.DeepEqual(savedPayment.Amount, payments[0].Amount) {
+		t.Errorf("result: %v, expexted: %v", savedPayment, payments[0])
+		return
+	}
+}
