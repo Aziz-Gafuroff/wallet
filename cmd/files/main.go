@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/Aziz-Gafuroff/wallet/pkg/types"
 	"github.com/Aziz-Gafuroff/wallet/pkg/wallet"
@@ -99,29 +99,62 @@ func main() {
 
 	// log.Printf("%v\n", account)
 
-	var payments []types.Payment
+	
+	// account, err := svc.RegisterAcccount(types.Phone("+992928330001"))
+	// if err != nil {
+	// 	log.Print(err)
+	// 	return
+	// }
 
-	for i := 0; i < 100; i++ {
-		account, err := svc.RegisterAcccount(types.Phone("+99292833000"+strconv.Itoa(i)))
-		if err != nil {
-			log.Print(err)
-			return
-		}
+	// err = svc.Deposit(account.ID, 100000000)
+	// if err != nil {
+	// 	log.Print(err)
+	// 	return 
+	// }
 
-		err = svc.Deposit(account.ID, 1000)
-		if err != nil {
-			log.Print(err)
-			return 
-		}
+	// account2, err := svc.RegisterAcccount(types.Phone("+992928330002"))
+	// 	if err != nil {
+	// 		log.Print(err)
+	// 		return
+	// 	}
 
-		payment, err := svc.Pay(account.ID, types.Money(8+i), "mobile")
-		if err != nil {
-			log.Print(err)
-			return
-		}
+	// 	err = svc.Deposit(account2.ID, 100000000)
+	// 	if err != nil {
+	// 		log.Print(err)
+	// 		return 
+	// 	}
 
-		payments  = append(payments, *payment)
-	}
+	// for i := 0; i < 100; i++ {
+
+	// 	_, err := svc.Pay(account.ID, types.Money(2+i), "mobile")
+	// 	if err != nil {
+	// 		log.Print(err)
+	// 		return
+	// 	}
+
+	// }
+
+	// for i := 0; i < 97; i++ {
+
+	// 	_, err := svc.Pay(account2.ID, types.Money(2+i), "mobile")
+	// 	if err != nil {
+	// 		log.Print(err)
+	// 		return
+	// 	}
+
+	// }
+
+
+
+	// filterPayments, err := svc.FilterPayments(account2.ID, 5)
+	// 	if err != nil {
+	// 		log.Print(err)
+	// 		return
+	// 	}
+	// log.Print(len(filterPayments))
+
+
+
 
 	// account, err := svc.FindAccountByID(1)
 	// if err != nil {
@@ -148,11 +181,11 @@ func main() {
 	// log.Printf("%v\n", favorite)
 
 
-	err := svc.HistoryToFiles(payments, "data", 10)
-	if err != nil {
-		log.Print(err)
-		return 
-	}
+	// err := svc.HistoryToFiles(payments, "data", 10)
+	// if err != nil {
+	// 	log.Print(err)
+	// 	return 
+	// }
 
 	// err := svc.Import("data")
 	// if err != nil {
@@ -165,4 +198,33 @@ func main() {
 	// }
 
 	// log.Printf("Account: %v", account )
+
+	svc.RegisterAcccount("789")
+	// srv.RegisterAccount("456")
+
+	svc.Deposit(1, 120000000000000)
+
+	svc.Pay(1, 1236, "mobile")
+	svc.Pay(1, 31336, "Home")
+	svc.Pay(1, 4656, "mobile")
+	svc.Pay(1, 986, "mobile")
+	svc.Pay(1, 7736, "mobile")
+	svc.Pay(1, 137736, "mobile")
+	svc.Pay(1, 1236, "Cafe")
+	svc.Pay(1, 332126, "mobile")
+	svc.Pay(1, 36133, "mobile")
+	svc.Pay(1, 736, "Home")
+	svc.Pay(1, 98736, "Home")
+
+	q, err := svc.FilterPaymentsByFn(getfilteredPayment, 4)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(q)
+
+}
+
+func getfilteredPayment(payment types.Payment) bool {
+	return payment.Category == "mobile"
 }
