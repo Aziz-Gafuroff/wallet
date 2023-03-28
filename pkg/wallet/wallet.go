@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Aziz-Gafuroff/wallet/pkg/types"
 	"github.com/google/uuid"
@@ -564,4 +566,156 @@ func saveHistoryToFile(payments []types.Payment, dir string, fileName string) er
 	
 }
 
+func (s *Service) SumPayments(goroutines int) types.Money {
+	mu := sync.Mutex{}
+	var sumAll types.Money
+	wg := sync.WaitGroup{}
+	part := len(s.payments) / goroutines
+	countParts := 0
 
+	if goroutines <= 1 {
+		sumAll = saveSumPayments(s.payments)
+	} else	{
+		for i := 1; i <= goroutines; i++ {
+			wg.Add(1)
+			go func(j int) {
+				mu.Lock()
+				defer wg.Done()
+				sum := saveSumPayments(s.payments[countParts:countParts + part])
+				countParts += part
+				sumAll += sum
+				mu.Unlock()
+			}(i)
+		}
+		wg.Wait()
+	}
+	return sumAll
+}
+
+func saveSumPayments(payments []*types.Payment) types.Money {
+	sum := types.Money(0)
+	if len(payments) == 0 {
+		return 0
+	}
+
+	for _, payment := range payments {
+		sum += payment.Amount
+	}
+
+	return sum
+}
+
+func (s *Service) FilterPayments(accountID int64, goroutines int) ([]types.Payment, error) {
+	mu := sync.Mutex{}
+	var filterPayments []types.Payment
+	wg := sync.WaitGroup{}
+	
+	partLimit := int(math.Ceil(float64(len(s.payments))/float64(goroutines)))
+	lenPayments := len(s.payments)
+	part := []int{}
+	for i := 0; i < goroutines; i++ {
+		if lenPayments <= partLimit {
+			part = append(part,lenPayments)
+			continue
+		}
+		part = append(part, partLimit)
+		lenPayments -= partLimit
+	}
+
+	countParts := 0
+
+	if goroutines <= 1 {
+		filterPayments = partFilterPayments(s.payments, accountID)
+	} else	{
+		for i := 1; i <= goroutines; i++ {
+			wg.Add(1)
+			go func(j int) {
+				mu.Lock()
+				defer wg.Done()
+				
+				newPayments := partFilterPayments(s.payments[countParts:countParts + part[j-1]], accountID)
+				countParts += part[j-1]
+				filterPayments = append(filterPayments, newPayments...)
+				mu.Unlock()
+			}(i)
+		}
+		wg.Wait()
+	}
+	return filterPayments, nil
+}
+
+func partFilterPayments(payments []*types.Payment, accountID int64) []types.Payment {
+	var newPayments []types.Payment
+	for _, payment := range payments {
+		if payment.AccountID == accountID {
+			newPayments = append(newPayments, *payment)
+		}
+		
+	}
+	return newPayments
+}
+
+func (s *Service) FilterPaymentsByFn(filter func(payment types.Payment) bool, goroutines int,) ([]types.Payment, error) {
+	if goroutines < 2 {
+		return filterByFn(filter, s.payments), nil
+	}
+	
+	mu := sync.Mutex{}
+	wg := sync.WaitGroup{}
+	
+	lengthPayment := len(s.payments)
+	part := partsPayment(lengthPayment, goroutines)
+	
+	var filteredPayments []types.Payment
+
+	for i := 1; i <= goroutines; i++ {
+		start, finish := i*part-part, i*part
+
+		if start > len(s.payments)-1 {
+			break
+		}
+
+		wg.Add(1)
+		go func(start, finish int) {
+			var fp []types.Payment
+			defer wg.Done()
+			if finish < lengthPayment {
+				fp = filterByFn(filter, s.payments[start:finish])
+			} else {
+				fp = filterByFn(filter, s.payments[start: ])
+			}
+			mu.Lock()
+			filteredPayments = append(filteredPayments, fp...)
+			mu.Unlock()
+		}(start, finish)
+	}
+
+	
+	
+	wg.Wait()
+
+	return filteredPayments, nil
+}
+
+func partslengthPayment(lengthPayment, goroutines int) {
+	panic("unimplemented")
+}
+
+func filterByFn(p func(payment types.Payment) bool, payments []*types.Payment) []types.Payment {
+	var filPayment []types.Payment
+
+	for _, payment := range payments {
+		if p(*payment) {
+			filPayment = append(filPayment, *payment)
+		}
+		
+	}
+	return filPayment
+}
+
+func partsPayment(sliceLengthpayment int, parts int) int {
+	if sliceLengthpayment%parts == 0 {
+		return sliceLengthpayment / parts
+	}
+	return sliceLengthpayment / parts + 1
+}
