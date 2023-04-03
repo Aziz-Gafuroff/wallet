@@ -23,6 +23,11 @@ type Service struct {
 	favorites     []*types.Favorite
 }
 
+type Progress struct {
+	Part int
+	Result types.Money
+}
+
 var (
 	ErrAccountNotFound      = errors.New("Account not found")
 	ErrPhoneRegistred       = errors.New("phone already registred")
@@ -718,4 +723,62 @@ func partsPayment(sliceLengthpayment int, parts int) int {
 		return sliceLengthpayment / parts
 	}
 	return sliceLengthpayment / parts + 1
+}
+
+func (s *Service) SumPaymentsWithProgress() <-chan Progress {
+	var wg sync.WaitGroup
+	const elemInPart = 40
+
+	chunkSum := make(chan Progress)
+	
+	partsNum := parts(len(s.payments), elemInPart)
+	wg.Add(partsNum)
+
+	for i := 0; i < partsNum; i++ {
+		start, finish := i*elemInPart, (i+1)*elemInPart
+		if finish > len(s.payments) {
+			finish = len(s.payments)
+		}
+
+		j := i
+		go func(ch chan<- Progress, data []*types.Payment) {
+			defer wg.Done()
+			progress := Progress {
+				Part: j + 1,
+				Result: sum(data),
+			}
+
+			ch <- progress
+		}(chunkSum, s.payments[start:finish])
+	}
+
+	go func() {
+		defer close(chunkSum)
+		wg.Wait()
+	}()
+
+	return chunkSum
+}
+
+func sum(payments []*types.Payment) types.Money {
+	var tl types.Money
+
+	if len(payments) == 0 {
+		return 0
+	}
+
+	for _, payment := range payments {
+		tl += payment.Amount
+		
+	}
+	return tl
+
+}
+
+func parts(sliceLength int, m int) int {
+	if sliceLength == 0 {
+		return sliceLength / m
+	}
+
+	return sliceLength / m + 1
 }

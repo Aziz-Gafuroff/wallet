@@ -215,16 +215,20 @@ func main() {
 	svc.Pay(1, 36133, "mobile")
 	svc.Pay(1, 736, "Home")
 	svc.Pay(1, 98736, "Home")
+	svc.Pay(1, 98736, "Home")
+	svc.Pay(1, 98736, "Home")
+	svc.Pay(1, 98736, "Home")
+	svc.Pay(1, 98736, "Home")
+	svc.Pay(1, 98736, "Home")
+	svc.Pay(1, 98736, "Home")
+	svc.Pay(1, 98736, "Home")
 
-	q, err := svc.FilterPaymentsByFn(getfilteredPayment, 4)
-	if err != nil {
-		log.Fatal(err)
+	var tl types.Money
+
+	for v := range svc.SumPaymentsWithProgress() {
+		log.Println(v)
+		tl += v.Result
 	}
 
-	fmt.Println(q)
-
-}
-
-func getfilteredPayment(payment types.Payment) bool {
-	return payment.Category == "mobile"
+	fmt.Println(tl)
 }
